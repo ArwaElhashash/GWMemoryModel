@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 # This code implements the waveform model developed in the following two papers:
 # Paper I: Arwa Elhashash and David A. Nichols. ``Waveform models for the gravitational-wave memory effect: Extreme mass-ratio limit and final memory offset''. Phys. Rev. D 111, 044052 (2025). ArXiv:2407.19017.
 # Paper II: Arwa Elhashash and David A. Nichols. ``Waveform models for the gravitational-wave memory effect: II. Time-domain and frequency-domain models for nonspinning binaries''. ArXiv:2504.18635.
@@ -14,7 +13,6 @@ from typing import Tuple
 # Loading the remnant fit for final mass and spin calculation
 remnant_fit = surfinBH.LoadFits('NRSur3dq8Remnant')
 
-
 # # Time-domain Waveform Model
 
 # ## Memory Model Parameters
@@ -22,8 +20,11 @@ remnant_fit = surfinBH.LoadFits('NRSur3dq8Remnant')
 # Coefficients for the inspiral memory model (Table III. in paper II)
 x_insp = np.asarray([2155.81002984, -22124.15922533, 117604.79338105, -331057.67271698, 380724.41433229])
 
+# Coefficients for the intermediate memory model (Table IV. in paper II)
+x_int = np.asarray([8.49306e-1, 1.02024e1, 4.29098e-2, 2.36601e-1, 8.37061e-3, 1.59611e-2, 5.97250e-4, 1.10423e-3, 8.23572e-1, 1.01875e0, 9.40991e-4, 6.22363e-3, 1.19119e-3])
+
 # Coefficients of the QNM fits for the three oscillatory modes with (l, m) = (2, 1), (2, 2) and (3, 2) (Table V. in Paper II)
-# C_lmj[(l,m,j)][n] = an array of length N+1 containing the different values of C_lmj (where N is the highest overtone number)
+# C_lmj[(l,m,j)] = an array of length N+1 containing the different values of C_lmj (where N is the highest overtone number)
 
 C_lmj = {(2,1,0): np.asarray([ 7.47640117e-03-4.77861746e-02j, -3.05298784e-01+4.81131374e-01j,
          1.71408140e+00-3.41178737e+00j, -4.38123073e+00+1.54558797e+01j,
@@ -62,10 +63,6 @@ C_lmj = {(2,1,0): np.asarray([ 7.47640117e-03-4.77861746e-02j, -3.05298784e-01+4
         -598.91828811-6.66300780e+02j,  811.52998102+9.81025956e+02j,
         -561.09237015-6.94459624e+02j,  156.84119469+1.93151340e+02j])
          }
-
-# Coefficients for the intermediate memory model (Table IV. in paper II)
-x_int = np.asarray([8.49306e-1, 1.02024e1, 4.29098e-2, 2.36601e-1, 8.37061e-3, 1.59611e-2, 5.97250e-4, 1.10423e-3, 8.23572e-1, 1.01875e0, 9.40991e-4, 6.22363e-3, 1.19119e-3])
-
 
 # ## Inspiral Memory
 
@@ -110,6 +107,7 @@ def compute_pn_waveform(tc: float,
     }
 
     return (4/7) * np.sqrt((5*np.pi)/6) * eta * xpn * sum(pn_terms.values())
+
 
 def compute_inspiral_memory_model(q: float,
                                   x: np.ndarray = x_insp,
@@ -292,7 +290,7 @@ def compute_memory_model(q: float,
                          ti: float = -1e4,
                          tf: float = 1.3e2,
                          ti_int: float = -2e3,
-                         tf_int: float = 0.,
+                         tf_int: float = 2.,
                          dt: float = 0.01,
                          outputs: str = 'full'):
     
@@ -316,59 +314,93 @@ def compute_memory_model(q: float,
                 dict of the ringdown time and ringdown memory)
 
     '''
-    p10, p11 = x[0:2]
-    p20, p21 = x[2:4]
-    p30, p31 = x[4:6]
-    p40, p41 = x[6:8]
-    p50, p51 = x[8:10]
-    p60, p61 = x[10:12]
+    # Extract parameters 
+    params = x[:12].reshape(6, 2) # First 12 elements
     c6 = x[12]
     
     # Compute symmetric mass ratio
-    eta = q/(q+1)**2
+    eta = q / (q + 1)**2
     
-    p1 = p10 + p11*eta
-    p2 = p20 + p21*eta
-    p3 = p30 + p31*eta
-    p4 = p40 + p41*eta
-    p5 = p50 + p51*eta
-    p6 = p60 + p61*eta
+    # Compute eta-dependent parameters
+    p_values = params[:, 0] + params[:, 1] * eta
+    p1, p2, p3, p4, p5, p6 = p_values
     
+    # Create time arrays
     int_t = np.linspace(ti_int, tf_int, 1 + int(np.rint((tf_int - ti_int) / dt)))
     rd_t = np.linspace(tf_int, tf, 1 + int(np.rint((tf - tf_int) / dt)))
     insp_t = np.linspace(ti, ti_int, 1 + int(np.rint((ti_int - ti) / dt)))
+    
+    # Concatenate time arrays, avoiding duplicates at boundaries
     t = np.concatenate((insp_t[:-1], int_t, rd_t[1:]))
     
+    # Compute memory components
     hmem_insp,_ = compute_inspiral_memory_model(q=q, x=x_insp, ti=ti, tf=ti_int)
-    hmem_rd= compute_ringdown_memory_model(q=q)[np.where(rd_t<=tf_int)[0][-1]:]
+    hmem_rd= compute_ringdown_memory_model(q=q, ti=tf_int)
     
+    # Compute derivatives and edge handling
     hmem_insp_1d = np.gradient(hmem_insp, dt, edge_order=2)
     hmem_rd_1d = np.gradient(hmem_rd, dt, edge_order=2)
     
     hmem_insp_2d = np.gradient(hmem_insp_1d, dt, edge_order=2)
     hmem_rd_2d = np.gradient(hmem_rd_1d, dt, edge_order=2)
 
-    Bs = np.vstack((np.array([1, np.exp(p1*tf_int), np.exp(p2*tf_int), np.exp(p3*tf_int), np.exp(p4*tf_int), np.exp(p5*tf_int)]),
-                      np.array([1, np.exp(p1*ti_int), np.exp(p2*ti_int), np.exp(p3*ti_int), np.exp(p4*ti_int), np.exp(p5*ti_int)]),
-                      np.array([0, p1*np.exp(p1*tf_int), p2*np.exp(p2*tf_int), p3*np.exp(p3*tf_int), p4*np.exp(p4*tf_int), p5*np.exp(p5*tf_int)]),
-                      np.array([0, p1*np.exp(p1*ti_int), p2*np.exp(p2*ti_int), p3*np.exp(p3*ti_int), p4*np.exp(p4*ti_int), p5*np.exp(p5*ti_int)]),
-                      np.array([0, p1**2 * np.exp(p1*tf_int), p2**2 * np.exp(p2*tf_int), p3**2 * np.exp(p3*tf_int), p4**2 * np.exp(p4*tf_int), p5**2 * np.exp(p5*tf_int) ]),
-                      np.array([0, p1**2 * np.exp(p1*ti_int), p2**2 * np.exp(p2*ti_int), p3**2 * np.exp(p3*ti_int), p4**2 * np.exp(p4*ti_int), p5**2 * np.exp(p5*ti_int) ]) ))
+    # Build coefficient matrix more systematically
+    p_array = np.array([p1, p2, p3, p4, p5])
+    
+    # Exponential terms at boundary points
+    exp_tf = np.exp(p_array * tf_int)
+    exp_ti = np.exp(p_array * ti_int)
+    
+    # Build the 6x6 coefficient matrix
+    Bs = np.array([
+        [1, *exp_tf],                           # Function values at tf_int
+        [1, *exp_ti],                           # Function values at ti_int
+        [0, *(p_array * exp_tf)],               # First derivatives at tf_int
+        [0, *(p_array * exp_ti)],               # First derivatives at ti_int
+        [0, *(p_array**2 * exp_tf)],            # Second derivatives at tf_int
+        [0, *(p_array**2 * exp_ti)]             # Second derivatives at ti_int
+    ])
 
     Bs_inv = np.linalg.pinv(Bs)
-    Bf = np.reshape(np.array([np.exp(p6*tf_int), np.exp(p6*ti_int), p6*np.exp(p6*tf_int), p6*np.exp(p6*ti_int), p6**2 * np.exp(p6*tf_int), p6**2 * np.exp(p6*ti_int)]),(6,1))
-    cf = np.reshape(c6,(1,1))
-    A = np.reshape(np.array([hmem_rd[0], hmem_insp[-1], hmem_rd_1d[0], hmem_insp_1d[-1], hmem_rd_2d[0], hmem_insp_2d[-1]]),(6,1))
-    A_new = np.reshape(A,(6,1))-np.dot(Bf,cf)
-    cs = np.dot(Bs_inv, A_new)
+    
+    # Build p6 contribution vector
+    exp_p6_tf = np.exp(p6 * tf_int)
+    exp_p6_ti = np.exp(p6 * ti_int)
+    
+    Bf = np.array([
+        exp_p6_tf,
+        exp_p6_ti,
+        p6 * exp_p6_tf,
+        p6 * exp_p6_ti,
+        p6**2 * exp_p6_tf,
+        p6**2 * exp_p6_ti
+    ]).reshape(6, 1)
+    
+    # Boundary conditions from inspiral and ringdown
+    boundary_values = np.array([
+        hmem_rd[0], hmem_insp[-1],
+        hmem_rd_1d[0], hmem_insp_1d[-1],
+        hmem_rd_2d[0], hmem_insp_2d[-1]
+    ]).reshape(6, 1)
+    
+    # Solve for c0-c5 coefficients
+    A_adjusted = boundary_values - Bf * c6
+    cs = np.dot(Bs_inv, A_adjusted).flatten()
+    c0, c1, c2, c3, c4, c5 = cs
 
-    c0, c1, c2, c3, c4, c5 = np.reshape(cs, (1,6))[0]
-
-    hmem_int = c0 + c1*np.exp(p1*int_t) + c2*np.exp(p2*int_t) + c3*np.exp(p3*int_t) + c4*np.exp(p4*int_t) + c5*np.exp(p5*int_t) + c6*np.exp(p6*int_t) 
-
+    # Compute intermediate memory
+    exp_terms = np.array([np.exp(p_val * int_t) for p_val in p_array])
+    hmem_int = (c0 + 
+                np.sum(cs[1:6] * exp_terms.T, axis=1) + 
+                c6 * np.exp(p6 * int_t))
+    
+    # Combine all memory components
     hmem = np.concatenate((hmem_insp[:-1], hmem_int, hmem_rd[1:]))
+    
+    # Intermediate parameters
     int_params = np.asarray([c0, c1, c2, c3, c4, c5, c6, p1, p2, p3, p4, p5, p6])
     
+    # Return results based on output type
     if outputs == 'full':
         return {'time': t,
                 'memory': hmem}
