@@ -24,7 +24,7 @@ x_insp = np.asarray([2155.81002984, -22124.15922533, 117604.79338105, -331057.67
 x_int = np.asarray([8.49306e-1, 1.02024e1, 4.29098e-2, 2.36601e-1, 8.37061e-3, 1.59611e-2, 5.97250e-4, 1.10423e-3, 8.23572e-1, 1.01875e0, 9.40991e-4, 6.22363e-3, 1.19119e-3])
 
 # Coefficients of the QNM fits for the three oscillatory modes with (l, m) = (2, 1), (2, 2) and (3, 2) (Table V. in Paper II)
-# C_lmj[(l,m,j)] = an array of length N+1 containing the different values of C_lmj (where N is the highest overtone number)
+# C_lmj[(l,m,j)][n] = an array of length N+1 containing the different values of C_lmj (where N is the highest overtone number)
 
 C_lmj = {(2,1,0): np.asarray([ 7.47640117e-03-4.77861746e-02j, -3.05298784e-01+4.81131374e-01j,
          1.71408140e+00-3.41178737e+00j, -4.38123073e+00+1.54558797e+01j,
@@ -204,6 +204,7 @@ def compute_qnm_parameters(q: float)-> Tuple[float, dict, dict]:
     
     return mf, A, omega
 
+
 def compute_ringdown_memory_model(q: float,
                                   C_lmnj: dict = C_lmj,
                                    ti: float = 0.,
@@ -334,8 +335,8 @@ def compute_memory_model(q: float,
     t = np.concatenate((insp_t[:-1], int_t, rd_t[1:]))
     
     # Compute memory components
-    hmem_insp,_ = compute_inspiral_memory_model(q=q, x=x_insp, ti=ti, tf=ti_int)
-    hmem_rd= compute_ringdown_memory_model(q=q, ti=tf_int)
+    hmem_insp,_ = compute_inspiral_memory_model(q=q, x=x_insp, ti=ti, tf=ti_int, dt=dt)
+    hmem_rd= compute_ringdown_memory_model(q=q, ti=tf_int, dt=dt)
     
     # Compute derivatives and edge handling
     hmem_insp_1d = np.gradient(hmem_insp, dt, edge_order=2)
