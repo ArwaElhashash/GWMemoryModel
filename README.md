@@ -16,30 +16,28 @@ Ringdown Memory Model: Quasi-normal mode (QNM) based model for the ringdown phas
 Intermediate Memory Model: Smooth transition phenomenological model between inspiral and ringdown phases  
 Full Memory Model: Complete waveform covering all three phases  
 Mass Ratio Range: Supports binary systems with mass ratios q ∈ [1, 8]  
-Nonspinning Systems: Optimized for binary black holes with zero initial spins
+Nonspinning Systems: Calibrated for binary black holes with zero initial spins
 
 # Dependencies
 This code requires the following Python packages that can be installed using pip or conda:
-- numpy
-- qnm 
-- surfinBH
+- [numpy](https://numpy.org/doc/stable/index.html)
+- [qnm](https://pypi.org/project/qnm/) 
+- [surfinBH](https://pypi.org/project/surfinBH/)
 
 # Installation and Usage
 
 1. Clone or download the repository
-2. Import the module in your Python script:
-   
-   ```Import GWMemoryModel as gwm```
+2. Import the module in your Python script
 ## Example
 
 ```python
-Import GWMemoryModel as gwm
+import GWMemoryModel as gwm
 
 # Define mass ratio (m1/m2 where m1 >= m2)
 q = 2.0  # Mass ratio between 1 and 8
 
 # Compute full memory waveform
-result = compute_memory_model(q=q, outputs='full')
+result = gwm.compute_memory_model(q=q, outputs='full')
 
 # Extract time and memory arrays
 time = result['time']
