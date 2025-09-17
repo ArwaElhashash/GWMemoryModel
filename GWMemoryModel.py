@@ -2,7 +2,7 @@
 
 # This code implements the waveform model developed in the following two papers:
 # Paper I: Arwa Elhashash and David A. Nichols. ``Waveform models for the gravitational-wave memory effect: Extreme mass-ratio limit and final memory offset''. Phys. Rev. D 111, 044052 (2025). ArXiv:2407.19017.
-# Paper II: Arwa Elhashash and David A. Nichols. ``Waveform models for the gravitational-wave memory effect: II. Time-domain and frequency-domain models for nonspinning binaries''. ArXiv:2504.18635.
+# Paper II: Arwa Elhashash and David A. Nichols. ``Waveform models for the gravitational-wave memory effect: II. Time-domain and frequency-domain models for nonspinning binaries''. Phys. Rev. D 112, 064014 (2025). ArXiv:2504.18635.
 
 # Needed packages
 import numpy as np
