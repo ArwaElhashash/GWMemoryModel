@@ -13,9 +13,7 @@ from typing import Tuple
 # Loading the remnant fit for final mass and spin calculation
 remnant_fit = surfinBH.LoadFits('NRSur3dq8Remnant')
 
-# # Time-domain Waveform Model
-
-# ## Memory Model Parameters
+# ## Time-Domain Model Parameters
 
 # Coefficients for the inspiral memory model (Table III. in paper II)
 x_insp = np.asarray([2155.81002984, -22124.15922533, 117604.79338105, -331057.67271698, 380724.41433229])
@@ -64,6 +62,25 @@ C_lmj = {(2,1,0): np.asarray([ 7.47640117e-03-4.77861746e-02j, -3.05298784e-01+4
         -561.09237015-6.94459624e+02j,  156.84119469+1.93151340e+02j])
          }
 
+# ## Frequency-Domain Memory Model Parameters
+
+# Amplitude-model coefficients:
+# x = [a11, a12, a21, a22, a32, b10, b11, b20, b21, b30, b31, c0, c1]
+# (a31 is fixed to zero by construction; see compute_global_amplitude_model)
+amplitude_params = np.asarray([-4.62939930e-01,  8.05972250e-01, -1.93002245e+00, -7.92143357e-01,
+        1.09945379e+00,  1.80967806e+00,  1.97447613e-04,  4.64415781e+00,
+        2.36292617e+00,  1.82272214e+00,  1.61541350e-05,  9.99923604e-01,
+        9.49905432e-01])
+
+# Phase-model coefficients:
+# x = [a0, a1, a2,  b0, b1, b2,  c0, c1, c2,  d0, d1, d2,  g0, g1, g2,  h0, h1, h2]
+phase_params = np.asarray([ 1.54644804e+02, -3.83187952e+02, -1.09433432e+02, -4.53639279e-02,
+        1.96682245e+00, -6.42498632e+00, -4.90466459e+00,  4.66409968e+02,
+        5.54509756e+02, -4.90706383e-02,  1.42544528e+00, -2.91977247e+00,
+        6.54194457e+00, -1.30731611e+02,  7.91180733e+02, -2.92996886e-01,
+        6.37110873e+00, -1.00876756e+01])
+
+# ## Time-Domain Memory Model
 # ## Inspiral Memory
 
 def compute_pn_waveform(tc: float,
@@ -286,14 +303,14 @@ def compute_ringdown_memory_model(q: float,
 
 # ## Intermediate Memory and Full model
 
-def compute_memory_model(q: float,
-                         x: np.ndarray = x_int,
-                         ti: float = -1e4,
-                         tf: float = 1.3e2,
-                         ti_int: float = -2e3,
-                         tf_int: float = 2.,
-                         dt: float = 0.01,
-                         outputs: str = 'full'):
+def compute_TD_memory_model(q: float,
+                            x: np.ndarray = x_int,
+                            ti: float = -1e4,
+                            tf: float = 1.3e2,
+                            ti_int: float = -2e3,
+                            tf_int: float = 2.,
+                            dt: float = 0.01,
+                            outputs: str = 'full'):
     
     '''
     Compute the full memory model
@@ -419,3 +436,160 @@ def compute_memory_model(q: float,
     else:
         return 'Enter a valid output variable option: full or components'
 
+# ## Frequency-Domain Memory Model
+# ## Amplitude Model
+
+def compute_global_amplitude_model(x: np.ndarray,
+                                   q: float,
+                                   freq: np.ndarray):
+
+    """
+    Evaluate the frequency-domain memory amplitude model.
+ 
+    The amplitude is a sum of three "csch" basis functions, each with a
+    coefficient (a1, a2, a3) and a width parameter (b1, b2, b3) that
+    depend on the symmetric mass ratio eta = q / (1 + q)^2. The
+    coefficients a_i are quadratic functions of eta:
+ 
+        a_i = a_i1 * eta + a_i2 * eta^2
+ 
+    with the constraint a31 = 0 (i.e. a3 = a32 * eta^2 only).
+ 
+    Parameters
+    ----------
+    x : Length-13 array of fitted coefficients, ordered as
+        [a11, a12, a21, a22, a32, b10, b11, b20, b21, b30, b31, c0, c1].
+    q : Binary mass ratio, q = m1 / m2 >= 1.
+    freq : Array of (dimensionless) frequencies at which to evaluate the
+        amplitude model.
+ 
+    Returns
+    -------
+    An array of the frequency-domain memory amplitude model, h * freq (i.e. this
+        must be divided by `freq` to get the strain amplitude; see
+        `compute_hmem_model`).
+    """
+    
+    # Unpack coefficients (each b/a coefficient is stored as log10 in x)
+    a11, a12 = 10**x[0],  10**x[1]
+    a21, a22 = 10**x[2],  10**x[3]
+    a32      = 10**x[4]               # a31 = 0 enforced
+
+    b10, b11 = 10**x[5],  10**x[6]
+    b20, b21 = 10**x[7],  10**x[8]
+    b30, b31 = 10**x[9],  10**x[10]
+
+    c0, c1   = x[11], x[12]
+
+    # Symmetric mass ratio
+    eta = q / (1 + q) ** 2
+ 
+    # Mass-ratio-dependent coefficients
+    a1 = a11 * eta + a12 * eta**2
+    a2 = a21 * eta + a22 * eta**2
+    a3 =             a32 * eta**2     # a31 = 0
+
+    b1 = b10 + b11 * eta
+    b2 = b20 + b21 * eta
+    b3 = b30 + b31 * eta
+
+    c  = c0  + c1  * eta
+
+    # Sum of three basis functions
+    hmem_amp_model = (  a1 * np.pi / np.sinh(b1 * freq * np.pi / 2)
+                      + a2 * np.pi / np.sinh(b2 * freq * np.pi / 2)
+                      - a3 * freq**(c-1)    * np.pi / np.sinh(b3 * freq * np.pi / 2))
+
+    return hmem_amp_model
+
+
+# ## Phase Model
+
+def compute_global_phase_model(x: np.ndarray,
+                              q: float,
+                              freq: np.ndarray,
+                              tf: float = 1.3e2):
+    
+    """
+    Evaluate the frequency-domain memory phase model.
+ 
+    The phase is built from three basis functions (two exponential decays
+    and a power law), each with a coefficient that is a quadratic function
+    of the symmetric mass ratio eta = q / (1 + q)^2:
+ 
+        x = x_0 + eta * x_1 + eta^2 * x_2
+    The 2*pi*tf*freq term aligns the model with the peak-at-t=0 convention.
+   
+    Parameters
+    ----------
+    x : Length-18 array of fitted coefficients, ordered as
+        [a0, a1, a2, b0, b1, b2, c0, c1, c2, d0, d1, d2,
+         g0, g1, g2, h0, h1, h2].
+    q : Binary mass ratio, q = m1 / m2 >= 1.
+    freq : Array of (dimensionless) frequencies at which to evaluate the
+        phase model.
+    tf : Reference/end time (in M) of the time-domain model used when this
+        phase fit was performed. Defaults to 1.3e2; only override this
+        if you are deliberately testing a different alignment.
+  
+    Returns
+    -------
+    An array of the frequency-domain memory phase model (radians).
+    """
+
+    a0, a1, a2 = x[0:3]
+    b0, b1, b2 = x[3:6]
+    c0, c1, c2 = x[6:9]
+    d0, d1, d2 = x[9:12]
+    g0, g1, g2 = x[12:15]
+    h0, h1, h2 = x[15:]
+    
+    eta = q/(q+1)**2
+    a = a0 + eta * a1 + eta**2 * a2
+    b = b0 + eta * b1 + eta**2 * b2
+    c = c0 + eta * c1 + eta**2 * c2
+    d = d0 + eta * d1 + eta**2 * d2
+    g = g0 + eta * g1 + eta**2 * g2
+    h = h0 + eta * h1 + eta**2 * h2
+
+    hmem_phase_model = (-a * freq * np.exp(-b/freq)
+                        - c * freq * np.exp(-freq/d) 
+                        + g * freq**h
+                        - np.pi/2
+                        + 2*np.pi*tf*freq)
+
+    return hmem_phase_model
+
+
+# ## Frequency-domain Full Model
+
+def compute_FD_memory_model(q: float,
+                           freq: np.ndarray,
+                           amp_x: np.ndarray = amplitude_params,
+                           ph_x: np.ndarray = phase_params):
+    
+    """
+    Compute the full complex frequency-domain memory waveform, h_mem(f).
+ 
+    Combines the amplitude and phase models into
+ 
+        h_mem(f) = A(f) * exp(i * Phi(f))
+ 
+    Parameters
+    ----------
+    q : Binary mass ratio, q = m1 / m2 >= 1.
+    freq : Array of (dimensionless) frequencies at which to evaluate the model.
+    amp_x : Fitted amplitude-model coefficients (see `amplitude_params`).
+    ph_x : Fitted phase-model coefficients (see `phase_params`).
+ 
+    Returns
+    -------
+    Complex array of the frequency-domain memory strain, hmem_model(f).
+    """
+    
+    amp_model = compute_global_amplitude_model(x=amp_x, q=q, freq=freq)
+    phase_model = compute_global_phase_model(q=q, x=ph_x, freq=freq)
+    
+    hmem_model = amp_model * np.exp(1.j*phase_model)
+    
+    return hmem_model
