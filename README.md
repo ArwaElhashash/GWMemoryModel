@@ -6,7 +6,7 @@ This code implements waveform models for the gravitational-wave memory effect, b
 
 Paper I: Arwa Elhashash and David A. Nichols. "Waveform models for the gravitational-wave memory effect: Extreme mass-ratio limit and final memory offset". [Phys. Rev. D **111**, 044052 (2025)](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.111.044052). [ArXiv:2407.19017.](https://arxiv.org/abs/2407.19017)  
 Paper II: Arwa Elhashash and David A. Nichols. "Waveform models for the gravitational-wave memory effect: II. Time-domain and frequency-domain models for nonspinning binaries". [Phys. Rev. D **112**, 064014 (2025)](https://journals.aps.org/prd/abstract/10.1103/wzqk-62wc). [ArXiv:2504.18635.](https://arxiv.org/abs/2504.18635)
-Paper III: Arwa Elhashash and David A. Nichols. "Waveform models for the gravitational-wave memory effect: III. Phenomenological frequency-domain model for nonspinning binaries".
+Paper III: Arwa Elhashash and David A. Nichols. "Waveform models for the gravitational-wave memory effect: III. Phenomenological frequency-domain model for nonspinning binaries". [Arxiv:2609.04340.](https://arxiv.org/abs/2609.04340)
 
 The model provides time-domain and frequency-domain waveforms for the gravitational-wave memory effect for nonspinning binary black hole systems, covering the inspiral, intermediate, and ringdown phases.
 
