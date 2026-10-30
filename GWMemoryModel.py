@@ -3,6 +3,7 @@
 # This code implements the waveform model developed in the following two papers:
 # Paper I: Arwa Elhashash and David A. Nichols. ``Waveform models for the gravitational-wave memory effect: Extreme mass-ratio limit and final memory offset''. Phys. Rev. D 111, 044052 (2025). ArXiv:2407.19017.
 # Paper II: Arwa Elhashash and David A. Nichols. ``Waveform models for the gravitational-wave memory effect: II. Time-domain and frequency-domain models for nonspinning binaries''. Phys. Rev. D 112, 064014 (2025). ArXiv:2504.18635.
+# Paper III: Arwa Elhashash and David A. Nichols. ``Waveform models for the gravitational-wave memory effect: III. Phenomenological frequency-domain model for nonspinning binaries''. ArXiv:2609.04340.
 
 # Needed packages
 import numpy as np
@@ -67,10 +68,10 @@ C_lmj = {(2,1,0): np.asarray([ 7.47640117e-03-4.77861746e-02j, -3.05298784e-01+4
 # Amplitude-model coefficients:
 # x = [a11, a12, a21, a22, a32, b10, b11, b20, b21, b30, b31, c0, c1]
 # (a31 is fixed to zero by construction; see compute_global_amplitude_model)
-amplitude_params = np.asarray([-4.62939930e-01,  8.05972250e-01, -1.93002245e+00, -7.92143357e-01,
-        1.09945379e+00,  1.80967806e+00,  1.97447613e-04,  4.64415781e+00,
-        2.36292617e+00,  1.82272214e+00,  1.61541350e-05,  9.99923604e-01,
-        9.49905432e-01])
+amplitude_params = np.asarray([1.08195685e+00, 2.00965784e+01, 3.69085873e-02, 5.06998315e-01,
+         3.95005973e+01, 6.45175787e+01, 1.00045474e+00, 4.40714977e+04,
+         2.30635508e+02, 6.64847653e+01, 1.00003720e+00, 0.9999236 ,
+         0.94990543])
 
 # Phase-model coefficients:
 # x = [a0, a1, a2,  b0, b1, b2,  c0, c1, c2,  d0, d1, d2,  g0, g1, g2,  h0, h1, h2]
@@ -471,13 +472,13 @@ def compute_global_amplitude_model(x: np.ndarray,
     """
     
     # Unpack coefficients (each b/a coefficient is stored as log10 in x)
-    a11, a12 = 10**x[0],  10**x[1]
-    a21, a22 = 10**x[2],  10**x[3]
-    a32      = 10**x[4]               # a31 = 0 enforced
+    a11, a12 = x[0],  x[1]
+    a21, a22 = x[2],  x[3]
+    a32      = x[4]               # a31 = 0 enforced
 
-    b10, b11 = 10**x[5],  10**x[6]
-    b20, b21 = 10**x[7],  10**x[8]
-    b30, b31 = 10**x[9],  10**x[10]
+    b10, b11 = x[5],  x[6]
+    b20, b21 = x[7],  x[8]
+    b30, b31 = x[9],  x[10]
 
     c0, c1   = x[11], x[12]
 
@@ -496,9 +497,9 @@ def compute_global_amplitude_model(x: np.ndarray,
     c  = c0  + c1  * eta
 
     # Sum of three basis functions
-    hmem_amp_model = (  a1 * np.pi / np.sinh(b1 * freq * np.pi / 2)
-                      + a2 * np.pi / np.sinh(b2 * freq * np.pi / 2)
-                      - a3 * freq**(c-1)    * np.pi / np.sinh(b3 * freq * np.pi / 2))
+    hmem_amp_model = (  a1 / np.sinh(b1 * freq * np.pi / 2)
+                      + a2 / np.sinh(b2 * freq * np.pi / 2)
+                      - a3 * freq**(c-1) / np.sinh(b3 * freq * np.pi / 2))
 
     return hmem_amp_model
 
