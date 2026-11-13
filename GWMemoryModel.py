@@ -68,10 +68,9 @@ C_lmj = {(2,1,0): np.asarray([ 7.47640117e-03-4.77861746e-02j, -3.05298784e-01+4
 # Amplitude-model coefficients:
 # x = [a11, a12, a21, a22, a32, b10, b11, b20, b21, b30, b31, c0, c1]
 # (a31 is fixed to zero by construction; see compute_global_amplitude_model)
-amplitude_params = np.asarray([1.08195685e+00, 2.00965784e+01, 3.69085873e-02, 5.06998315e-01,
-         3.95005973e+01, 6.45175787e+01, 1.00045474e+00, 4.40714977e+04,
-         2.30635508e+02, 6.64847653e+01, 1.00003720e+00, 0.9999236 ,
-         0.94990543])
+amplitude_params = np.asarray([1.08195685e+00, 2.00965784e+01, 3.69085873e-02, 5.06998315e-01, 3.95005973e+01,
+                                1.01343976e+02, 1.57151063e+00, 6.92273467e+04, 3.62281409e+02, 1.04434025e+02, 1.57085476e+00,
+                                0.9999236 , 0.94990543])
 
 # Phase-model coefficients:
 # x = [a0, a1, a2,  b0, b1, b2,  c0, c1, c2,  d0, d1, d2,  g0, g1, g2,  h0, h1, h2]
@@ -497,9 +496,9 @@ def compute_global_amplitude_model(x: np.ndarray,
     c  = c0  + c1  * eta
 
     # Sum of three basis functions
-    hmem_amp_model = (  a1 / np.sinh(b1 * freq * np.pi / 2)
-                      + a2 / np.sinh(b2 * freq * np.pi / 2)
-                      - a3 * freq**(c-1) / np.sinh(b3 * freq * np.pi / 2))
+    hmem_amp_model = (  a1 / np.sinh(b1 * freq )
+                      + a2 / np.sinh(b2 * freq )
+                      - a3 * freq**(c-1) / np.sinh(b3 * freq ))
 
     return hmem_amp_model
 
